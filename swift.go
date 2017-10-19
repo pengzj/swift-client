@@ -4,7 +4,7 @@ import (
 	"net"
 	"log"
 	"fmt"
-	"../swift/protocol"
+	"github.com/pengzj/swift-protocol"
 	"bytes"
 	"encoding/json"
 	"time"
