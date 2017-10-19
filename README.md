@@ -4,7 +4,7 @@
 ```
 import (
 
-	sdk "https://github.com/pengzj/swift-client-go"
+	"github.com/pengzj/swift-client-go"
 	"fmt"
   
 )
