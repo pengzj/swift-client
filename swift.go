@@ -8,11 +8,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"time"
+	"math"
 )
 
 
 var (
-	heartbeatInterval = 10 * time.Second
+	heartbeatInterval = 5 * time.Second
 )
 
 type route struct {
@@ -57,6 +58,7 @@ type Client struct {
 	send chan []byte
 
 	receive chan []byte
+
 }
 
 func NewClient() *Client {
@@ -64,6 +66,10 @@ func NewClient() *Client {
 		send:make(chan []byte, 10),
 		receive:make(chan []byte),
 	}
+}
+
+func (client *Client) Close()  {
+	client.conn.Close()
 }
 
 func (client *Client) Connect(host, port string)  {
@@ -92,8 +98,6 @@ func (client *Client) Connect(host, port string)  {
 			}
 		}
 	}
-
-
 }
 
 func (client *Client) write(data []byte)  {
@@ -127,7 +131,7 @@ func (client *Client) readDump()  {
 	var currentTotalLength int
 	var length int
 	for {
-		data := make([]byte, 1024)
+		data := make([]byte, math.MaxUint16)
 		n, err := client.conn.Read(data)
 		if err != nil {
 			log.Fatal(err)
@@ -137,10 +141,16 @@ func (client *Client) readDump()  {
 
 		buffer.Write(buf)
 
-		currentTotalLength = len(buffer.Bytes())
-		length = headerLength +  protocol.GetBodyLength(buffer.Bytes())
-		message := make([]byte, length)
-		if length <= currentTotalLength {
+		//do with packet splicing
+		for {
+			currentTotalLength = len(buffer.Bytes())
+			length = headerLength +  protocol.GetBodyLength(buffer.Bytes())
+			message := make([]byte, length)
+
+			if length > currentTotalLength {
+				break
+			}
+
 			_, err = buffer.Read(message)
 			if err != nil {
 				log.Fatalf("read data error: %v", err)
@@ -159,6 +169,7 @@ func (client *Client) readDump()  {
 				buffer.Write(leftData)
 			} else {
 				buffer.Reset()
+				break
 			}
 		}
 	}
@@ -183,7 +194,6 @@ func (client *Client) handle(data []byte)  {
 }
 
 func (client *Client) onHandshake(data []byte)  {
-	fmt.Println("receive ack from server handshake")
 	err := json.Unmarshal(data, &routes)
 	if err != nil {
 		log.Fatal(err)
@@ -197,9 +207,6 @@ func (client *Client) onHandshake(data []byte)  {
 			}
 		}
 	}
-
-	fmt.Println(std.handleMap)
-
 	client.receive <- []byte{}
 }
 
@@ -215,37 +222,28 @@ func (client *Client) onPush(routeId int, data []byte)  {
 }
 
 func (client *Client) onResponse(messageId, routeId int, data []byte)  {
-	fmt.Println("receive response: ", string(data))
 	client.receive <- data
 }
 
 func (client *Client) writeDump()  {
 	ticker := time.NewTicker(heartbeatInterval)
-	defer func() {
-		ticker.Stop()
-		client.conn.Close()
-	}()
-
+	defer ticker.Stop()
+	var buffer bytes.Buffer
 	for {
 		select {
 		case message := <-client.send:
-			client.conn.SetWriteDeadline(time.Now().Add(heartbeatInterval))
+			buffer.Write(message)
+
+			n := len(client.send)
+			for i := 0; i < n; i++ {
+				buffer.Write(<-client.send)
+			}
 
 			_, err := client.conn.Write(message)
 			if err != nil {
 				return
 			}
-
-			n := len(client.send)
-			for i := 0; i < n; i++ {
-				_, err = client.conn.Write(<-client.send)
-				if err != nil {
-					return
-				}
-			}
-
 		case <-ticker.C:
-			client.conn.SetWriteDeadline(time.Now().Add(heartbeatInterval))
 			_, err := client.conn.Write(protocol.Encode(protocol.TYPE_HEARTBEAT, []byte{}))
 			if err != nil {
 				return
