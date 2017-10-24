@@ -186,6 +186,8 @@ func (client *Client) handle(data []byte)  {
 		client.onPush(routeId, in)
 	case protocol.TYPE_HEARTBEAT:
 		client.onHeartbeat(body)
+	case protocol.TYPE_KICK:
+		client.onKick(body)
 	case protocol.TYPE_DATA_RESPONSE:
 		messageId, routeId, msg := protocol.MessageDecode(body)
 		client.onResponse(messageId,routeId,msg)
@@ -212,6 +214,10 @@ func (client *Client) onHandshake(data []byte)  {
 
 func (client *Client) onHeartbeat(data []byte)  {
 	fmt.Println("receive heartbeat: ", string(data))
+}
+
+func (client *Client) onKick(data []byte)  {
+	fmt.Println("you are kicked, because ", string(data))
 }
 
 func (client *Client) onPush(routeId int, data []byte)  {
