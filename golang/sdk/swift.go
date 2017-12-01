@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"time"
-	"math"
 )
 
 
@@ -131,7 +130,7 @@ func (client *Client) readDump()  {
 	var currentTotalLength int
 	var length int
 	for {
-		data := make([]byte, math.MaxUint16)
+		data := make([]byte, 4096)
 		n, err := client.conn.Read(data)
 		if err != nil {
 			log.Fatal(err)

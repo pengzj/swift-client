@@ -307,7 +307,7 @@
             return;
         }
         container.nextheartbeatTimeout = Date.now() + heartbeatTimeout;
-        container.heartbeatTimeoutId = setTimeout(heartbeatTimeoutCB.bind({container: this.container}), heartbeatInterval);
+        container.heartbeatTimeoutId = setTimeout(heartbeatTimeoutCB.bind({container: container}), heartbeatInterval);
     }
 
     function onPush(container, data) {
