@@ -130,7 +130,7 @@ func (client *Client) readDump()  {
 	var currentTotalLength int
 	var length int
 	for {
-		data := make([]byte, 4096)
+		data := make([]byte, 1024)
 		n, err := client.conn.Read(data)
 		if err != nil {
 			log.Fatal(err)
