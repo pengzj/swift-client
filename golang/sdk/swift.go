@@ -72,7 +72,7 @@ func (client *Client) Close()  {
 }
 
 func (client *Client) Connect(host, port string)  {
-	conn, err := net.Dial("tcp", ":3301")
+	conn, err := net.Dial("tcp", host + ":" + port)
 	if err != nil {
 		log.Fatal(err)
 	}
